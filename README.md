@@ -90,8 +90,7 @@ files via pull requests.
   - Serial: `41:D2:9D:D1:72:EA:EE:A7:80:C1:2C:6C:E9:2F:87:52`
   - SHA-256: `69:72:9B:8E:15:A8:6E:FC:17:7A:57:AF:B7:17:1D:FC:64:AD:D2:8C:2F:CA:8C:F1:50:7E:34:45:3C:CB:14:70`
   - Valid: 2020-09-04 – 2040-09-17
-- Test server: `https://nas.espiot.top:5002` (leaf `nas.espiot.top`, ECDSA, issuer Let's Encrypt YE2).
-
+- Test server: `https://nas.jellyfin.test:5002` (leaf `nas.jellyfin.test`, ECDSA, issuer Let's Encrypt YE2).
 **Build locally:** `./gradlew :app:testDebugUnitTest :app:assembleDebug -Pjellyfin.version=1.0.0-android9-x2-test` (APK in `app/build/outputs/apk/debug/`, package `org.jellyfin.androidtv.debug`).
 
 **Build with GitHub Actions:** Actions → *App / Android 9 X2 Test Build* → Run workflow. The APK artifact is `jellyfin-androidtv-android9-isrg-root-x2-test.apk`. The workflow runs unit tests and `.github/scripts/verify-android9-x2-apk.sh` (APK parses, minSdk ≤ 28, package name, ISRG Root X2 fingerprint inside the APK, no trust-all patterns).
@@ -100,7 +99,7 @@ files via pull requests.
 
 **Install:** download the APK from the Release page, then `adb connect <tv-ip>` and `adb install -r jellyfin-androidtv-android9-isrg-root-x2-test.apk` (or use a USB drive / file manager). **Uninstall:** `adb uninstall org.jellyfin.androidtv.debug` or via Settings → Apps.
 
-**TLS verification checks** (manual, on device or with `openssl s_client -verify_hostname nas.espiot.top -connect nas.espiot.top:5002`):
+**TLS verification checks** (manual, on device or with `openssl s_client -verify_hostname nas.jellyfin.test -connect nas.jellyfin.test:5002`):
 1. Valid certificate + correct host → must connect.
 2. Expired certificate → must fail.
 3. Unknown CA → must fail.
