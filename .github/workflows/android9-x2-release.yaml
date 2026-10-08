@@ -1,0 +1,77 @@
+name: App / Android 9 X2 Test Release
+
+on:
+  push:
+    tags:
+      - 'android9-x2-v*'
+
+permissions:
+  contents: read
+
+env:
+  APK_NAME: jellyfin-androidtv-android9-isrg-root-x2-test.apk
+
+jobs:
+  build:
+    name: Build experimental APK
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version-file: .tools-versions
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Run unit tests
+        run: ./gradlew :app:testDebugUnitTest
+      - name: Assemble APK
+        run: ./gradlew :app:assembleDebug -Pjellyfin.version=1.0.0-android9-x2-test
+      - name: Collect APK
+        run: |
+          mkdir -p build/gh-app-publish
+          apk=$(find app/build/outputs/apk/debug -name "*.apk" | head -n1)
+          test -n "$apk"
+          cp "$apk" "build/gh-app-publish/$APK_NAME"
+      - name: Verify APK
+        run: .github/scripts/verify-android9-x2-apk.sh "build/gh-app-publish/$APK_NAME"
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: android9-isrg-root-x2-test-apk
+          retention-days: 30
+          if-no-files-found: error
+          path: build/gh-app-publish/${{ env.APK_NAME }}
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download APK
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: android9-isrg-root-x2-test-apk
+          path: dist
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'NOTES'
+          **Experimental build / Android 9 TLS compatibility test / Includes ISRG Root X2**
+
+          - Fork of Jellyfin Android TV, **not** an official Jellyfin release.
+          - Experimental build targeting Android 9 (API 28).
+          - Bundles the ISRG Root X2 certificate (SHA-256 `69:72:9B:8E:15:A8:6E:FC:17:7A:57:AF:B7:17:1D:FC:64:AD:D2:8C:2F:CA:8C:F1:50:7E:34:45:3C:CB:14:70`) as an additional trust anchor next to the system CAs.
+          - Used to test Let's Encrypt YE2 / ISRG Root X2 TLS compatibility.
+          - TLS certificate verification (chain, expiry, hostname) is NOT disabled.
+          - Package: `org.jellyfin.androidtv.debug` (installs next to the official app).
+          NOTES
+          gh release create "$GITHUB_REF_NAME" "dist/$APK_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Jellyfin Android TV - Android 9 ISRG Root X2 Test" \
+            --notes-file notes.md --prerelease
