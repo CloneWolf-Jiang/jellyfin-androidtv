@@ -1,0 +1,85 @@
+name: App / Android 9 X2 Signed Release Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'android9-x2-release-v*'
+
+permissions:
+  contents: read
+
+env:
+  APK_NAME: jellyfin-androidtv-android9-isrg-root-x2-release.apk
+
+# Signing: set the repository secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+# ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD to keep the same signature between builds
+# (required to update an installed app). Without them a one-off key is generated for this run.
+jobs:
+  build:
+    name: Build signed release APK
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version-file: .tools-versions
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Prepare signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          KEYSTORE="$RUNNER_TEMP/release.jks"
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "Using signing key from repository secrets"
+            echo "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE"
+          else
+            echo "::warning::No signing secrets configured, generating a one-off key. Uninstall the old app before installing each new build."
+            KEYSTORE_PASSWORD="$(openssl rand -hex 16)"
+            KEY_PASSWORD="$KEYSTORE_PASSWORD"
+            KEY_ALIAS="jellyfin"
+            keytool -genkeypair -v -keystore "$KEYSTORE" -storetype PKCS12 \
+              -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+              -alias "$KEY_ALIAS" -keyalg RSA -keysize 4096 -validity 10000 \
+              -dname "CN=Jellyfin Android TV Fork"
+          fi
+          echo "::add-mask::$KEYSTORE_PASSWORD"
+          echo "::add-mask::$KEY_PASSWORD"
+          {
+            echo "KEYSTORE_FILE=$KEYSTORE"
+            echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "SIGNING_KEY_ALIAS=$KEY_ALIAS"
+            echo "SIGNING_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+      - name: Run unit tests
+        run: ./gradlew :app:testDebugUnitTest
+      - name: Assemble release APK
+        run: ./gradlew :app:assembleRelease -Pjellyfin.version=1.0.0-android9-x2-release
+      - name: Collect APK
+        run: |
+          mkdir -p build/gh-app-publish
+          apk=$(find app/build/outputs/apk/release -name "*.apk" | head -n1)
+          test -n "$apk"
+          cp "$apk" "build/gh-app-publish/$APK_NAME"
+      - name: Verify APK
+        env:
+          EXPECTED_PACKAGE: org.jellyfin.androidtv
+        run: .github/scripts/verify-android9-x2-apk.sh "build/gh-app-publish/$APK_NAME"
+      - name: Verify signature
+        run: |
+          BUILD_TOOLS="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/* | sort -V | tail -n1)"
+          "$BUILD_TOOLS/apksigner" verify --print-certs "build/gh-app-publish/$APK_NAME"
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: android9-isrg-root-x2-release-apk
+          retention-days: 30
+          if-no-files-found: error
+          path: build/gh-app-publish/${{ env.APK_NAME }}
