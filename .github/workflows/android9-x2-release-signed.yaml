@@ -2,15 +2,18 @@ name: App / Android 9 X2 Signed Release Build
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'android9-x2-release-v*'
+    inputs:
+      version:
+        description: Release version (tag will be created as v<version>)
+        required: true
+        default: 0.19.10
 
 permissions:
   contents: read
 
 env:
-  APK_NAME: jellyfin-androidtv-android9-isrg-root-x2-release.apk
+  VERSION: ${{ inputs.version }}
+  APK_NAME: jellyfin-androidtv-v${{ inputs.version }}-release.apk
 
 # Signing: set the repository secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
 # ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD to keep the same signature between builds
@@ -61,7 +64,7 @@ jobs:
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest
       - name: Assemble release APK
-        run: ./gradlew :app:assembleRelease -Pjellyfin.version=1.0.0-android9-x2-release
+        run: ./gradlew :app:assembleRelease -Pjellyfin.version="$VERSION"
       - name: Collect APK
         run: |
           mkdir -p build/gh-app-publish
@@ -83,3 +86,25 @@ jobs:
           retention-days: 30
           if-no-files-found: error
           path: build/gh-app-publish/${{ env.APK_NAME }}
+
+  release:
+    name: Create tag and GitHub Release
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download APK
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: android9-isrg-root-x2-release-apk
+          path: dist
+      - name: Create tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$VERSION" "dist/$APK_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Jellyfin Android TV v$VERSION (Android 9 / ISRG Root X2)" \
+            --notes "Fork build, not an official Jellyfin release. Includes the ISRG Root X2 trust anchor; TLS verification is not disabled. Package: org.jellyfin.androidtv"
