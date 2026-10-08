@@ -3,7 +3,7 @@
 set -euo pipefail
 
 APK="${1:?usage: $0 <apk>}"
-EXPECTED_PACKAGE="org.jellyfin.androidtv.debug"
+EXPECTED_PACKAGE="${EXPECTED_PACKAGE:-org.jellyfin.androidtv.debug}"
 # Official ISRG Root X2 SHA-256 fingerprint (https://letsencrypt.org/certificates/)
 EXPECTED_SHA256="69729B8E15A86EFC177A57AFB7171DFC64ADD28C2FCA8CF1507E34453CCB1470"
 
