@@ -123,7 +123,7 @@ Automated unit tests (`IsrgRootX2Tests`) verify the bundled certificate fingerpr
   - 序列号：`41:D2:9D:D1:72:EA:EE:A7:80:C1:2C:6C:E9:2F:87:52`
   - SHA-256：`69:72:9B:8E:15:A8:6E:FC:17:7A:57:AF:B7:17:1D:FC:64:AD:D2:8C:2F:CA:8C:F1:50:7E:34:45:3C:CB:14:70`
   - 有效期：2020-09-04 至 2040-09-17
-- 测试服务器：`https://nas.espiot.top:5002`（叶子证书 `nas.espiot.top`，ECDSA，签发者 Let's Encrypt YE2）。
+- 测试服务器：`https://nas.jellyfin.test:5002`（叶子证书 `nas.jellyfin.test`，ECDSA，签发者 Let's Encrypt YE2）。
 
 **本地编译：** `./gradlew :app:testDebugUnitTest :app:assembleDebug -Pjellyfin.version=1.0.0-android9-x2-test`（APK 位于 `app/build/outputs/apk/debug/`，包名 `org.jellyfin.androidtv.debug`）。
 
