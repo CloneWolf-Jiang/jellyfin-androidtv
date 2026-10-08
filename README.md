@@ -133,7 +133,7 @@ Automated unit tests (`IsrgRootX2Tests`) verify the bundled certificate fingerpr
 
 **下载与安装：** 在 Release 页面下载 APK，然后 `adb connect <电视IP>` 并执行 `adb install -r jellyfin-androidtv-android9-isrg-root-x2-test.apk`（或使用 U 盘/文件管理器）。**卸载：** `adb uninstall org.jellyfin.androidtv.debug`，或在 设置 → 应用 中卸载。
 
-**TLS 验证测试**（设备上手动测试，或 `openssl s_client -verify_hostname nas.espiot.top -connect nas.espiot.top:5002`）：
+**TLS 验证测试**（设备上手动测试，或 `openssl s_client -verify_hostname nas.jellyfin.test -connect nas.jellyfin.test:5002`）：
 1. 正确证书 + 正确域名 → 必须连接成功。
 2. 证书过期 → 必须失败。
 3. 未知 CA → 必须失败。
