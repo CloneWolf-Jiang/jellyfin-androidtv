@@ -3,6 +3,8 @@
     <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration" >
         <trust-anchors>
             <certificates src="system" />
+            <!-- Explicit ISRG Root X2 anchor, see "Android 9 / ISRG Root X2" in README.md -->
+            <certificates src="@raw/isrg_root_x2" />
             <certificates src="user" tools:ignore="AcceptsUserCertificates" />
         </trust-anchors>
     </base-config>
